@@ -1,4 +1,4 @@
--- Chef Smart — proyecto Supabase independiente (NO Senior Safe)
+-- Mi Menú Smart — proyecto Supabase independiente (NO Senior Safe)
 -- Proyecto sugerido: chef_smart
 -- Ejecutar en SQL Editor o via CLI: supabase db push
 

@@ -1,4 +1,4 @@
-/* Chef Smart — cache básico para PWA offline de la shell. */
+/* Mi Menú Smart — cache básico para PWA offline de la shell. */
 const CACHE = "chef-smart-v1";
 const PRECACHE = ["/", "/recetas/", "/plan/", "/compras/", "/manifest.webmanifest", "/icons/icon.svg"];
 
