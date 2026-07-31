@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect } from "react";
+import { useRecipes } from "@/hooks/use-recipes";
 import { useChefSession } from "@/lib/chef-session";
-import { formatClp, suggestRecipes } from "@/lib/demo-data";
+import { formatClp } from "@/lib/demo-data";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function RecetasPage() {
   const { budgetClp, pantryTokens, ingredientsText } = useChefSession();
-  const recipes = useMemo(
-    () => suggestRecipes(budgetClp, pantryTokens),
-    [budgetClp, pantryTokens],
-  );
+  const { recipes, source, loading, error, search } = useRecipes();
+
+  useEffect(() => {
+    void search({ ingredients: pantryTokens, budget: budgetClp });
+  }, [budgetClp, pantryTokens, search]);
 
   return (
     <div className="space-y-6">
@@ -20,13 +23,25 @@ export default function RecetasPage() {
         </h1>
         <p className="mt-2 text-sm text-[var(--cs-muted)]">
           Hasta {formatClp(budgetClp)} · con: {ingredientsText || "tu despensa"}
+          {source ? (
+            <span className="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold">
+              {source === "supabase" ? "Supabase" : "Demo local"}
+            </span>
+          ) : null}
         </p>
+        {!isSupabaseConfigured() && (
+          <p className="mt-2 text-xs text-amber-800">
+            Sin keys de Supabase: usando datos demo. Configura `.env.local` del proyecto chef_smart.
+          </p>
+        )}
       </div>
 
-      {recipes.length === 0 ? (
+      {loading && <p className="text-sm text-[var(--cs-muted)]">Buscando recetas…</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
+
+      {!loading && recipes.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--cs-line)] bg-white/60 p-6 text-center">
           <p className="font-semibold text-[var(--cs-brand)]">Sin coincidencias en este presupuesto</p>
-          <p className="mt-2 text-sm text-[var(--cs-muted)]">Sube el monto o vuelve al inicio.</p>
           <Link href="/" className="mt-4 inline-block font-semibold text-[var(--cs-accent)]">
             Ajustar presupuesto →
           </Link>
@@ -42,22 +57,12 @@ export default function RecetasPage() {
                 <div>
                   <h2 className="text-lg font-bold text-[var(--cs-brand)]">{r.name}</h2>
                   <p className="mt-1 text-sm text-[var(--cs-muted)]">
-                    {r.difficulty} · {r.minutes} min
+                    {r.difficulty} · {r.time} min
                   </p>
                 </div>
                 <span className="shrink-0 rounded-full bg-[var(--cs-mint)]/30 px-3 py-1 text-sm font-bold text-[var(--cs-brand)]">
-                  {formatClp(r.costClp)}
+                  {formatClp(r.cost)}
                 </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {r.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-[var(--cs-muted)]"
-                  >
-                    {t}
-                  </span>
-                ))}
               </div>
             </li>
           ))}

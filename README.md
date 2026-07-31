@@ -60,6 +60,12 @@ npx cap sync android
 
 `capacitor.config.ts` ya apunta `webDir` a `out` y `appId` a `app.chefsmart.mobile`.
 
+## Base de datos (Supabase)
+
+Proyecto **independiente** `chef_smart` — ver [docs/SUPABASE.md](docs/SUPABASE.md).
+
+Tablas: `recipes`, `weekly_plans`. Hooks: `useRecipes`, `useWeeklyPlan`.
+
 ## Separación de Senior Safe
 
 Este proyecto vive en `chef-smart-app` (repo propio). No importar código, env vars ni Cloudflare Workers de `senior-life-guardian`.
