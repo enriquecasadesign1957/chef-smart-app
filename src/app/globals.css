@@ -1,26 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cs-bg: #eef5f0;
+  --cs-ink: #14241c;
+  --cs-muted: #5a6f64;
+  --cs-brand: #1b4332;
+  --cs-mint: #74c69d;
+  --cs-accent: #2d6a4f;
+  --cs-line: color-mix(in oklab, #1b4332 12%, white);
+  --cs-card: #f7fbf8;
+  --background: var(--cs-bg);
+  --foreground: var(--cs-ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #d8f3dc 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #b7e4c7 0%, transparent 50%),
+    var(--cs-bg);
+  color: var(--cs-ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100dvh;
+}
+
+input,
+textarea,
+button {
+  font: inherit;
 }

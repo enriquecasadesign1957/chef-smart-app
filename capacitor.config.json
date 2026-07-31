@@ -1,0 +1,11 @@
+{
+  "appId": "app.chefsmart.mobile",
+  "appName": "Chef Smart",
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

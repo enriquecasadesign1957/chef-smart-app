@@ -1,65 +1,84 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { useChefSession } from "@/lib/chef-session";
+import { formatClp } from "@/lib/demo-data";
+
+export default function HomePage() {
+  const { ingredientsText, setIngredientsText, budgetClp, setBudgetClp } = useChefSession();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="space-y-8">
+      <section className="space-y-3">
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--cs-accent)]">
+          Tu cocina, tu presupuesto
+        </p>
+        <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold leading-tight text-[var(--cs-brand)]">
+          Chef Smart
+        </h1>
+        <p className="max-w-md text-base leading-relaxed text-[var(--cs-muted)]">
+          Dinos qué tienes en la despensa y cuánto puedes gastar. Te sugerimos recetas, un plan
+          semanal y la lista de compras.
+        </p>
+      </section>
+
+      <section className="space-y-5 rounded-[1.75rem] border border-[var(--cs-line)] bg-[var(--cs-card)] p-5 shadow-[0_20px_50px_-28px_rgba(27,67,50,0.45)]">
+        <label className="block space-y-2">
+          <span className="text-sm font-semibold text-[var(--cs-brand)]">Ingredientes disponibles</span>
+          <textarea
+            value={ingredientsText}
+            onChange={(e) => setIngredientsText(e.target.value)}
+            rows={4}
+            placeholder="Ej: pollo, arroz, huevos, tomate…"
+            className="w-full resize-none rounded-2xl border border-[var(--cs-line)] bg-white px-4 py-3 text-[var(--cs-ink)] outline-none ring-[var(--cs-mint)] focus:ring-2"
+          />
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-sm font-semibold text-[var(--cs-brand)]">
+            Presupuesto por comida: {formatClp(budgetClp)}
+          </span>
+          <input
+            type="range"
+            min={2000}
+            max={20000}
+            step={500}
+            value={budgetClp}
+            onChange={(e) => setBudgetClp(Number(e.target.value))}
+            className="w-full accent-[var(--cs-brand)]"
+          />
+          <div className="flex justify-between text-xs text-[var(--cs-muted)]">
+            <span>$2.000</span>
+            <span>$20.000</span>
+          </div>
+        </label>
+
+        <Link
+          href="/recetas/"
+          className="flex w-full items-center justify-center rounded-2xl bg-[var(--cs-brand)] px-5 py-4 text-base font-bold text-white shadow-lg transition hover:opacity-95"
+        >
+          Ver recetas sugeridas
+        </Link>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3">
+        <Link
+          href="/plan/"
+          className="rounded-2xl border border-[var(--cs-line)] bg-white/70 p-4 transition hover:bg-white"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--cs-muted)]">Plan</p>
+          <p className="mt-1 font-semibold text-[var(--cs-brand)]">Menú semanal</p>
+        </Link>
+        <Link
+          href="/compras/"
+          className="rounded-2xl border border-[var(--cs-line)] bg-white/70 p-4 transition hover:bg-white"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--cs-muted)]">
+            Compras
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+          <p className="mt-1 font-semibold text-[var(--cs-brand)]">Lista lista</p>
+        </Link>
+      </section>
     </div>
   );
 }

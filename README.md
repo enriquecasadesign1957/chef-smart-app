@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chef Smart
 
-## Getting Started
+Frontend visual (PWA + base móvil) **independiente** de Senior Safe.
 
-First, run the development server:
+- **Stack:** Next.js (App Router) + Tailwind CSS
+- **Deploy:** GitHub Actions → Cloudflare Pages (`out/` static export)
+- **Sin** compartir repo, DB, workers ni integraciones con Senior Safe
+
+## Pantallas
+
+| Ruta | Función |
+|------|---------|
+| `/` | Ingredientes + presupuesto |
+| `/recetas` | Recetas sugeridas (costo, dificultad, tiempo) |
+| `/plan` | Menú semanal vs presupuesto |
+| `/compras` | Lista de compras por categorías |
+
+Datos actuales: **demo local** (`src/lib/demo-data.ts`). Backend/IA se agrega después en este mismo repo.
+
+## Desarrollo
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build estático (Cloudflare Pages)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+# salida en ./out
+```
 
-## Learn More
+### Secrets de GitHub (Actions)
 
-To learn more about Next.js, take a look at the following resources:
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Crea el proyecto Pages llamado `chef-smart-app` en Cloudflare (o deja que el primer deploy lo cree si tu token lo permite).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## PWA (iPhone / Android)
 
-## Deploy on Vercel
+- `public/manifest.webmanifest`
+- Service worker `public/sw.js`
+- En iPhone: Safari → Compartir → Añadir a pantalla de inicio
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Android (.aab) — preparación
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Tras `npm run build` (genera `out/`):
+
+```bash
+npm install @capacitor/core @capacitor/cli @capacitor/android --save
+npx cap add android
+npx cap sync android
+```
+
+2. Abrir Android Studio → `android/` → generar **Android App Bundle (.aab)**.
+
+`capacitor.config.ts` ya apunta `webDir` a `out` y `appId` a `app.chefsmart.mobile`.
+
+## Separación de Senior Safe
+
+Este proyecto vive en `chef-smart-app` (repo propio). No importar código, env vars ni Cloudflare Workers de `senior-life-guardian`.
