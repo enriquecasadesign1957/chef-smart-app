@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex max-w-lg items-center justify-between px-5 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <Link href="/" className="flex items-baseline gap-2">
             <span className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--cs-brand)]">
-              Chef Smart
+              Mi Menú Smart
             </span>
           </Link>
           <span className="rounded-full bg-[var(--cs-mint)]/25 px-3 py-1 text-xs font-semibold text-[var(--cs-brand)]">

@@ -1,6 +1,6 @@
 {
   "appId": "app.chefsmart.mobile",
-  "appName": "Chef Smart",
+  "appName": "Mi Menú Smart",
   "webDir": "out",
   "server": {
     "androidScheme": "https"

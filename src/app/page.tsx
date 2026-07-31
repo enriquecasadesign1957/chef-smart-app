@@ -14,7 +14,7 @@ export default function HomePage() {
           Tu cocina, tu presupuesto
         </p>
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold leading-tight text-[var(--cs-brand)]">
-          Chef Smart
+          Mi Menú Smart
         </h1>
         <p className="max-w-md text-base leading-relaxed text-[var(--cs-muted)]">
           Dinos qué tienes en la despensa y cuánto puedes gastar. Te sugerimos recetas, un plan

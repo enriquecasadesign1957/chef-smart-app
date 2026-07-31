@@ -1,6 +1,6 @@
 {
-  "name": "Chef Smart",
-  "short_name": "Chef Smart",
+  "name": "Mi Menú Smart",
+  "short_name": "Mi Menú",
   "description": "Recetas y menú semanal según tu presupuesto",
   "start_url": "/",
   "display": "standalone",

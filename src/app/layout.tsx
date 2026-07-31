@@ -18,13 +18,13 @@ const body = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Chef Smart — Cocina inteligente con tu presupuesto",
+  title: "Mi Menú Smart — Cocina inteligente con tu presupuesto",
   description:
     "Ingresa ingredientes y presupuesto. Recibe recetas, plan semanal y lista de compras.",
-  applicationName: "Chef Smart",
+  applicationName: "Mi Menú Smart",
   appleWebApp: {
     capable: true,
-    title: "Chef Smart",
+    title: "Mi Menú Smart",
     statusBarStyle: "default",
   },
   manifest: "/manifest.webmanifest",

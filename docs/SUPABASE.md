@@ -1,4 +1,4 @@
-# Chef Smart — setup Supabase (proyecto independiente)
+# Mi Menú Smart — setup Supabase (proyecto independiente)
 
 Senior Safe **no** debe usarse. Crea un proyecto nuevo en https://supabase.com llamado `chef_smart`.
 

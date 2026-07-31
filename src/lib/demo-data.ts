@@ -1,4 +1,4 @@
-/** Demo data — Chef Smart (sin backend aún). */
+/** Demo data — Mi Menú Smart (sin backend aún). */
 
 export type Difficulty = "Fácil" | "Media" | "Chef";
 

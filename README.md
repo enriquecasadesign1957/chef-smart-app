@@ -1,6 +1,7 @@
-# Chef Smart
+# Mi Menú Smart
 
-Frontend visual (PWA + base móvil) **independiente** de Senior Safe.
+Frontend visual (PWA + base móvil) **independiente** de Senior Safe.  
+Repo técnico: `chef-smart-app`.
 
 - **Stack:** Next.js (App Router) + Tailwind CSS
 - **Deploy:** GitHub Actions → Cloudflare Pages (`out/` static export)
