@@ -42,7 +42,7 @@ export default function PlanPage() {
         </h1>
         <p className="mt-2 text-sm text-[var(--cs-muted)]">
           Menú ajustado a tu presupuesto
-          {source ? ` · ${source === "supabase" ? "Supabase" : "Demo"}` : ""}
+          {source ? ` · ${source === "worker" ? "API" : source === "supabase" ? "Supabase" : "Demo"}` : ""}
           {saved ? " · guardado" : ""}
         </p>
         {!isSupabaseConfigured() && (

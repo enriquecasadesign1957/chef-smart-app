@@ -1,0 +1,25 @@
+name = "mi-menu-smart-api"
+main = "src/index.ts"
+compatibility_date = "2026-07-22"
+workers_dev = true
+
+# Dominio de producción (configurar ruta en Cloudflare Dashboard):
+# api.cocinaconpresupuesto.cl → este Worker
+# Routes example (activar tras verificar dominio):
+# [[routes]]
+# pattern = "api.cocinaconpresupuesto.cl/*"
+# zone_name = "cocinaconpresupuesto.cl"
+
+[vars]
+APP_NAME = "Mi Menú Smart"
+
+# Secrets (wrangler secret put …):
+# SUPABASE_URL
+# SUPABASE_SECRET_KEY   (sb_secret_… o service_role JWT — solo Worker)
+# GROQ_API_KEY
+# GROQ_MODEL            (opcional, default llama-3.3-70b-versatile)
+# OPENAI_API_KEY        (fallback)
+# OPENAI_MODEL          (opcional, default gpt-4o-mini)
+# TWILIO_ACCOUNT_SID
+# TWILIO_AUTH_TOKEN
+# TWILIO_WHATSAPP_FROM  (ej. whatsapp:+14155238886)

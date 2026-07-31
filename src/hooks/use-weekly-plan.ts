@@ -10,7 +10,7 @@ import {
 
 export function useWeeklyPlan() {
   const [plan, setPlan] = useState<WeeklyPlanSlot[]>([]);
-  const [source, setSource] = useState<"supabase" | "demo" | null>(null);
+  const [source, setSource] = useState<"worker" | "supabase" | "demo" | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

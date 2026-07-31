@@ -1,72 +1,39 @@
 # Mi Menú Smart
 
-Frontend visual (PWA + base móvil) **independiente** de Senior Safe.  
-Repo técnico: `chef-smart-app`.
+Frontend PWA + API Worker + Supabase — **independiente** de Senior Safe.  
+Repo: `chef-smart-app` · Marca: **Mi Menú Smart** · Corto PWA: **Mi Menú**
 
-- **Stack:** Next.js (App Router) + Tailwind CSS
-- **Deploy:** GitHub Actions → Cloudflare Pages (`out/` static export)
-- **Sin** compartir repo, DB, workers ni integraciones con Senior Safe
+Guía completa: [docs/ORCHESTRATION.md](docs/ORCHESTRATION.md) · DB: [docs/SUPABASE.md](docs/SUPABASE.md)
 
 ## Pantallas
 
 | Ruta | Función |
 |------|---------|
 | `/` | Ingredientes + presupuesto |
-| `/recetas` | Recetas sugeridas (costo, dificultad, tiempo) |
-| `/plan` | Menú semanal vs presupuesto |
-| `/compras` | Lista de compras por categorías |
-
-Datos actuales: **demo local** (`src/lib/demo-data.ts`). Backend/IA se agrega después en este mismo repo.
+| `/recetas` | Recetas (Worker IA / Supabase / demo) |
+| `/plan` | Menú semanal |
+| `/compras` | Lista de compras |
 
 ## Desarrollo
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-Abre http://localhost:3000
-
-## Build estático (Cloudflare Pages)
+API local:
 
 ```bash
-npm run build
-# salida en ./out
+cd workers && npm install && npm run dev
 ```
 
-### Secrets de GitHub (Actions)
+## Deploy
 
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
+- Pages: `.github/workflows/deploy-pages.yml`
+- Worker: `.github/workflows/deploy-worker.yml`
+- Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` + secrets del Worker (ver ORCHESTRATION.md)
 
-Crea el proyecto Pages llamado `chef-smart-app` en Cloudflare (o deja que el primer deploy lo cree si tu token lo permite).
+## Android / iOS
 
-## PWA (iPhone / Android)
-
-- `public/manifest.webmanifest`
-- Service worker `public/sw.js`
-- En iPhone: Safari → Compartir → Añadir a pantalla de inicio
-
-## Android (.aab) — preparación
-
-1. Tras `npm run build` (genera `out/`):
-
-```bash
-npm install @capacitor/core @capacitor/cli @capacitor/android --save
-npx cap add android
-npx cap sync android
-```
-
-2. Abrir Android Studio → `android/` → generar **Android App Bundle (.aab)**.
-
-`capacitor.config.ts` ya apunta `webDir` a `out` y `appId` a `app.chefsmart.mobile`.
-
-## Base de datos (Supabase)
-
-Proyecto **independiente** `chef_smart` — ver [docs/SUPABASE.md](docs/SUPABASE.md).
-
-Tablas: `recipes`, `weekly_plans`. Hooks: `useRecipes`, `useWeeklyPlan`.
-
-## Separación de Senior Safe
-
-Este proyecto vive en `chef-smart-app` (repo propio). No importar código, env vars ni Cloudflare Workers de `senior-life-guardian`.
+Ver sección Capacitor en ORCHESTRATION.md. AppId: `app.chefsmart.mobile`.

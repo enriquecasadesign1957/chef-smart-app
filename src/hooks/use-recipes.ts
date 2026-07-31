@@ -6,7 +6,7 @@ import type { Recipe } from "@/lib/supabase/types";
 
 export function useRecipes() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [source, setSource] = useState<"supabase" | "demo" | null>(null);
+  const [source, setSource] = useState<"worker" | "supabase" | "demo" | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

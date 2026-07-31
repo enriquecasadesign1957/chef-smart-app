@@ -25,7 +25,11 @@ export default function RecetasPage() {
           Hasta {formatClp(budgetClp)} · con: {ingredientsText || "tu despensa"}
           {source ? (
             <span className="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold">
-              {source === "supabase" ? "Supabase" : "Demo local"}
+              {source === "worker"
+                ? "API Worker"
+                : source === "supabase"
+                  ? "Supabase"
+                  : "Demo local"}
             </span>
           ) : null}
         </p>

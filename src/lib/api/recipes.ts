@@ -5,7 +5,14 @@ import { mapRecipeRow, type Recipe } from "@/lib/supabase/types";
 export type RecipesQuery = {
   ingredients?: string[];
   budget?: number;
+  generate?: boolean;
 };
+
+function apiBase(): string | null {
+  const base = process.env.NEXT_PUBLIC_MENU_API_URL?.trim();
+  if (!base || base.includes("YOUR_")) return null;
+  return base.replace(/\/$/, "");
+}
 
 function demoAsRecipes(): Recipe[] {
   return DEMO_RECIPES.map((r: DemoRecipe) => ({
@@ -25,15 +32,37 @@ function scoreRecipe(recipe: Recipe, tokens: string[]): number {
   ).length;
 }
 
-/** Equivalente a POST /recipes — ingredientes + presupuesto → recetas. */
+/** POST /recipes vía Worker Mi Menú Smart (fallback Supabase/demo). */
 export async function queryRecipes(input: RecipesQuery): Promise<{
   recipes: Recipe[];
-  source: "supabase" | "demo";
+  source: "worker" | "supabase" | "demo";
 }> {
   const budget = input.budget ?? Number.POSITIVE_INFINITY;
   const tokens = (input.ingredients ?? [])
     .map((t) => t.trim().toLowerCase())
     .filter(Boolean);
+
+  const base = apiBase();
+  if (base && Number.isFinite(budget)) {
+    try {
+      const res = await fetch(`${base}/recipes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ingredients: input.ingredients ?? [],
+          budget,
+          output: "recipes",
+          generate: input.generate !== false,
+        }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { recipes?: Recipe[] };
+        return { recipes: data.recipes ?? [], source: "worker" };
+      }
+    } catch {
+      /* fallback */
+    }
+  }
 
   const supabase = getSupabaseBrowser();
   if (supabase && isSupabaseConfigured()) {
