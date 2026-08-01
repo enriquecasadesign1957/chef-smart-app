@@ -3,7 +3,11 @@
 Frontend PWA + API Worker + Supabase — **independiente** de Senior Safe.  
 Repo: `chef-smart-app` · Marca: **Mi Menú Smart** · Corto PWA: **Mi Menú**
 
-Guía completa: [docs/ORCHESTRATION.md](docs/ORCHESTRATION.md) · DB: [docs/SUPABASE.md](docs/SUPABASE.md)
+Guía: [docs/ORCHESTRATION.md](docs/ORCHESTRATION.md) · DB: [docs/SUPABASE.md](docs/SUPABASE.md)
+
+**Live**
+- Web: https://mi-menu-smart.pages.dev  
+- API: https://mi-menu-smart-api.enriquecasadesign.workers.dev  
 
 ## Pantallas
 
@@ -22,18 +26,17 @@ cp .env.example .env.local
 npm run dev
 ```
 
-API local:
-
-```bash
-cd workers && npm install && npm run dev
-```
-
 ## Deploy
 
-- Pages: `.github/workflows/deploy-pages.yml`
+- Pages: `.github/workflows/deploy.yml`
 - Worker: `.github/workflows/deploy-worker.yml`
-- Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` + secrets del Worker (ver ORCHESTRATION.md)
+- Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` + Worker secrets (ORCHESTRATION.md)
 
 ## Android / iOS
 
-Ver sección Capacitor en ORCHESTRATION.md. AppId: `app.chefsmart.mobile`.
+```bash
+npm run build && npx cap sync android
+npx cap open android
+```
+
+AppId: `app.chefsmart.mobile` · PWA corto: **Mi Menú**
