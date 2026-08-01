@@ -13,6 +13,7 @@ function score(recipe: Recipe, tokens: string[]): number {
 export async function handleGetRecipes(req: Request, env: Env): Promise<Response> {
   let body: {
     ingredients?: string[];
+    preferences?: string;
     budget?: number;
     output?: string;
     generate?: boolean;
@@ -24,6 +25,7 @@ export async function handleGetRecipes(req: Request, env: Env): Promise<Response
     return badRequest("JSON inválido");
   }
 
+  const preferences = String(body.preferences ?? "").trim();
   const ingredients = (body.ingredients ?? []).map((s) => String(s).trim()).filter(Boolean);
   const budget = Number(body.budget);
   if (!Number.isFinite(budget) || budget <= 0) {
@@ -40,6 +42,7 @@ export async function handleGetRecipes(req: Request, env: Env): Promise<Response
         ingredients,
         budget,
         output: "recipes",
+        preferences: preferences || undefined,
       });
       if (body.persist !== false && aiRecipes.length) {
         try {
@@ -85,7 +88,12 @@ export async function handleGetRecipes(req: Request, env: Env): Promise<Response
       generated: aiRecipes.length,
       fromDb: dbRecipes.length,
       aiError,
-      prompt: { ingredients, budget, output: body.output ?? "recipes" },
+      prompt: {
+        ingredients,
+        preferences: preferences || undefined,
+        budget,
+        output: body.output ?? "recipes",
+      },
     },
   });
 }

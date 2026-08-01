@@ -5,6 +5,14 @@ export async function supabaseFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
+  if (!env.SUPABASE_URL?.trim()) {
+    throw new Error("Falta SUPABASE_URL en el Worker (wrangler secret put SUPABASE_URL)");
+  }
+  if (!env.SUPABASE_SECRET_KEY?.trim()) {
+    throw new Error(
+      "Falta SUPABASE_SECRET_KEY en el Worker (wrangler secret put SUPABASE_SECRET_KEY)",
+    );
+  }
   const url = `${env.SUPABASE_URL.replace(/\/$/, "")}/rest/v1${path}`;
   const headers = new Headers(init.headers);
   headers.set("apikey", env.SUPABASE_SECRET_KEY);

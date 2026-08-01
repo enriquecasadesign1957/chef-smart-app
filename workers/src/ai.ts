@@ -4,6 +4,7 @@ type AiPrompt = {
   ingredients: string[];
   budget: number;
   output: "recipes";
+  preferences?: string;
 };
 
 function resolveProvider(env: Env): { url: string; apiKey: string; model: string } | null {
@@ -45,6 +46,7 @@ export async function generateRecipesWithAi(
     ingredients: input.ingredients,
     budget: input.budget,
     output: "recipes" as const,
+    preferences: input.preferences || undefined,
   };
 
   const res = await fetch(provider.url, {
@@ -60,7 +62,10 @@ export async function generateRecipesWithAi(
         { role: "system", content: SYSTEM },
         {
           role: "user",
-          content: `Genera recetas con este input JSON:\n${JSON.stringify(userPayload)}`,
+          content:
+            `Genera recetas usando los ingredientes disponibles y ajustadas al presupuesto indicado. ` +
+            `Devuelve nombre, ingredientes, costo estimado, dificultad y tiempo.\n` +
+            `Input JSON:\n${JSON.stringify(userPayload)}`,
         },
       ],
       response_format: { type: "json_object" },
