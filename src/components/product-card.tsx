@@ -76,7 +76,7 @@ export function ProductCard({
         >
           {name}
         </h3>
-        <p className="mt-2 text-lg font-extrabold tabular-nums text-purple-700">
+        <p className="mt-2 text-xl font-extrabold tabular-nums text-purple-700">
           {formatClp(priceClp)}
         </p>
 

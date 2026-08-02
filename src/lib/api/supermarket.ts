@@ -6,7 +6,9 @@ export type SmartProduct = GroceryItem & {
 };
 
 function apiBase(): string | null {
-  const base = process.env.NEXT_PUBLIC_MENU_API_URL?.trim();
+  const base =
+    process.env.NEXT_PUBLIC_MENU_API_URL?.trim() ||
+    "https://mi-menu-smart-api.enriquecasadesign.workers.dev";
   if (!base || base.includes("YOUR_")) return null;
   return base.replace(/\/$/, "");
 }
