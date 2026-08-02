@@ -98,5 +98,6 @@ export function cleanAndSortIngredients(list: string[]): string[] {
 }
 
 export function ingredientsKey(list: string[]): string {
-  return cleanAndSortIngredients(list).join("|");
+  // Formato caché: "cebolla,papas,tomates"
+  return cleanAndSortIngredients(list).join(",");
 }
