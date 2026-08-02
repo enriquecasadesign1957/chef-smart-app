@@ -28,8 +28,8 @@ type ChefContextValue = ChefSession & {
 
 const defaults: ChefSession = {
   ingredientsText: "pollo, arroz, huevos, cebolla",
-  budgetClp: 8000,
-  weekBudgetClp: 45000,
+  budgetClp: 15000,
+  weekBudgetClp: 105000,
 };
 
 const ChefContext = createContext<ChefContextValue | null>(null);

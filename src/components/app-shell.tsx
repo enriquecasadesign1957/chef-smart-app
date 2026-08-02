@@ -7,7 +7,7 @@ const NAV = [
   { href: "/", label: "Inicio", icon: "⌂" },
   { href: "/recetas/", label: "Despensa", icon: "◉" },
   { href: "/plan/", label: "Plan", icon: "▦" },
-  { href: "/compras/", label: "Compras", icon: "☰" },
+  { href: "/compras/", label: "Súper", icon: "☰" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {

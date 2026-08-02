@@ -13,13 +13,53 @@ const DAYS = [
   "Domingo",
 ] as const;
 
-const MEALS = ["desayuno", "almuerzo", "cena"] as const;
+const DEFAULT_MEALS = ["almuerzo", "cena"] as const;
 
-/** POST /weekly-plan — generateWeeklyPlan + opcional WhatsApp */
+function pickForDay(
+  pool: Recipe[],
+  startIndex: number,
+  dailyBudget: number,
+  meals: string[],
+): Recipe[] | null {
+  const affordable = pool.filter((r) => r.cost <= dailyBudget).sort((a, b) => a.cost - b.cost);
+  if (affordable.length < meals.length) return null;
+
+  for (let offset = 0; offset < affordable.length; offset++) {
+    const picks: Recipe[] = [];
+    let sum = 0;
+    let ok = true;
+    for (let m = 0; m < meals.length; m++) {
+      const recipe = affordable[(startIndex + offset + m * 3) % affordable.length];
+      sum += recipe.cost;
+      if (sum > dailyBudget) {
+        ok = false;
+        break;
+      }
+      picks.push(recipe);
+    }
+    if (ok) return picks;
+  }
+
+  // Fallback: platos más baratos distintos si hay suficientes
+  const cheapest = [...affordable];
+  const picks: Recipe[] = [];
+  let sum = 0;
+  for (let m = 0; m < meals.length; m++) {
+    const recipe = cheapest[m % cheapest.length];
+    if (sum + recipe.cost > dailyBudget) return null;
+    picks.push(recipe);
+    sum += recipe.cost;
+  }
+  return picks;
+}
+
+/** POST /weekly-plan — presupuesto diario → plan Lun–Dom (almuerzo + cena) */
 export async function handleGenerateWeeklyPlan(req: Request, env: Env): Promise<Response> {
   let body: {
     ingredients?: string[];
     budget?: number;
+    daily_budget?: number;
+    meals?: string[];
     user_id?: string;
     recipient?: string;
     notify?: boolean;
@@ -30,10 +70,18 @@ export async function handleGenerateWeeklyPlan(req: Request, env: Env): Promise<
     return badRequest("JSON inválido");
   }
 
-  const budget = Number(body.budget);
-  if (!Number.isFinite(budget) || budget <= 0) {
-    return badRequest("budget debe ser un número > 0");
+  const dailyBudget = Number(body.daily_budget ?? body.budget);
+  if (!Number.isFinite(dailyBudget) || dailyBudget <= 0) {
+    return badRequest("daily_budget (o budget) debe ser un número > 0");
   }
+
+  const meals =
+    Array.isArray(body.meals) && body.meals.length
+      ? body.meals.map(String)
+      : [...DEFAULT_MEALS];
+
+  const weekBudget = dailyBudget * DAYS.length;
+  const perDishCap = Math.max(1500, Math.floor(dailyBudget / meals.length));
 
   const recipesRes = await handleGetRecipes(
     new Request(req.url, {
@@ -41,9 +89,10 @@ export async function handleGenerateWeeklyPlan(req: Request, env: Env): Promise<
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ingredients: body.ingredients ?? [],
-        budget: Math.max(1500, Math.floor(budget / 21)),
+        budget: perDishCap,
         generate: true,
         persist: true,
+        preferences: "Plan semanal variado chile, almuerzo y cena, económico",
       }),
     }),
     env,
@@ -57,12 +106,11 @@ export async function handleGenerateWeeklyPlan(req: Request, env: Env): Promise<
     return json(recipesJson, recipesRes.status);
   }
 
-  const pool = recipesJson.recipes ?? [];
+  const pool = (recipesJson.recipes ?? []).filter((r) => r.cost > 0);
   if (!pool.length) {
     return badRequest("No hay recetas para armar el plan");
   }
 
-  const perMeal = Math.max(1500, Math.floor(budget / 21));
   const plan: {
     day: string;
     meal_type: string;
@@ -70,14 +118,28 @@ export async function handleGenerateWeeklyPlan(req: Request, env: Env): Promise<
     budget: number;
   }[] = [];
 
-  let i = 0;
+  let dayIndex = 0;
   for (const day of DAYS) {
-    for (const meal_type of MEALS) {
-      const affordable = pool.filter((r) => r.cost <= perMeal * 1.35);
-      const source = affordable.length ? affordable : pool;
-      const recipe = source[i++ % source.length];
-      plan.push({ day, meal_type, recipe, budget });
+    const picks = pickForDay(pool, dayIndex * meals.length, dailyBudget, meals);
+    if (!picks) {
+      return badRequest(
+        `No se pudo armar ${day} dentro de ${dailyBudget} CLP (almuerzo + cena)`,
+      );
     }
+    picks.forEach((recipe, mi) => {
+      plan.push({
+        day,
+        meal_type: meals[mi],
+        recipe,
+        budget: dailyBudget,
+      });
+    });
+    dayIndex++;
+  }
+
+  const weekTotal = plan.reduce((s, slot) => s + slot.recipe.cost, 0);
+  if (weekTotal > weekBudget) {
+    return badRequest("El plan generado supera el presupuesto semanal");
   }
 
   let saved = false;
@@ -101,5 +163,17 @@ export async function handleGenerateWeeklyPlan(req: Request, env: Env): Promise<
     whatsapp = await sendMenuReadyWhatsApp(env, body.recipient);
   }
 
-  return json({ plan, saved, whatsapp, meta: { app: env.APP_NAME ?? "Mi Menú Smart" } });
+  return json({
+    plan,
+    saved,
+    whatsapp,
+    meta: {
+      app: env.APP_NAME ?? "Mi Menú Smart",
+      daily_budget: dailyBudget,
+      week_budget: weekBudget,
+      week_total: weekTotal,
+      meals,
+      within_budget: weekTotal <= weekBudget,
+    },
+  });
 }

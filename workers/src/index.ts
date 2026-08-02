@@ -1,11 +1,11 @@
 import { handleGetRecipes, handlePantryRecipes } from "./recipes";
+import { handleOptimizeSupermarket } from "./supermarket";
 import { sendMenuReadyWhatsApp } from "./twilio";
 import { CORS_HEADERS, badRequest, json, type Env } from "./types";
 import { handleGenerateWeeklyPlan } from "./weekly-plan";
 
 /**
  * Mi Menú Smart API Worker — independiente de Senior Safe.
- * GET /recipes?ingredients=… | POST /recipes | POST /weekly-plan | POST /notify/whatsapp
  */
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -25,6 +25,7 @@ export default {
             "GET /recipes?ingredients=",
             "POST /recipes",
             "POST /weekly-plan",
+            "POST /supermarket/optimize",
             "POST /notify/whatsapp",
           ],
         });
@@ -43,6 +44,13 @@ export default {
         (path === "/weekly-plan" || path.endsWith("/weekly-plan"))
       ) {
         return handleGenerateWeeklyPlan(request, env);
+      }
+
+      if (
+        request.method === "POST" &&
+        (path === "/supermarket/optimize" || path.endsWith("/supermarket/optimize"))
+      ) {
+        return handleOptimizeSupermarket(request, env);
       }
 
       if (

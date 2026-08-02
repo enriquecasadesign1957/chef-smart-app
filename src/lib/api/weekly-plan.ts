@@ -23,7 +23,8 @@ export type WeeklyPlanSlot = {
 };
 
 export type GenerateWeeklyPlanInput = {
-  budget: number;
+  /** Presupuesto diario CLP (almuerzo + cena). */
+  dailyBudget: number;
   ingredients?: string[];
   persist?: boolean;
   recipient?: string;
@@ -31,7 +32,7 @@ export type GenerateWeeklyPlanInput = {
   userId?: string;
 };
 
-const MEALS: MealType[] = ["desayuno", "almuerzo", "cena"];
+const PLAN_MEALS: MealType[] = ["almuerzo", "cena"];
 
 function apiBase(): string | null {
   const base = process.env.NEXT_PUBLIC_MENU_API_URL?.trim();
@@ -39,21 +40,63 @@ function apiBase(): string | null {
   return base.replace(/\/$/, "");
 }
 
-function pickRecipe(pool: Recipe[], index: number, maxCost: number): Recipe | null {
-  const affordable = pool.filter((r) => r.cost <= maxCost);
-  const source = affordable.length ? affordable : pool;
-  if (!source.length) return null;
-  return source[index % source.length];
+function pickDayMeals(pool: Recipe[], dayIndex: number, dailyBudget: number): Recipe[] | null {
+  const affordable = pool
+    .filter((r) => r.cost <= dailyBudget)
+    .sort((a, b) => a.cost - b.cost);
+  if (!affordable.length) return null;
+
+  for (let offset = 0; offset < affordable.length; offset++) {
+    const a = affordable[(dayIndex * 2 + offset) % affordable.length];
+    const b = affordable[(dayIndex * 2 + offset + 3) % affordable.length];
+    if (a.cost + b.cost <= dailyBudget) return [a, b];
+  }
+
+  const cheap = affordable[0];
+  if (cheap.cost * 2 <= dailyBudget) return [cheap, cheap];
+  return null;
 }
 
-/** POST /weekly-plan vía Worker (fallback local). */
+async function persistPlan(
+  plan: WeeklyPlanSlot[],
+  userId?: string,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return false;
+
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userId ?? userData.user?.id;
+  if (!uid) return false;
+
+  await supabase.from("weekly_plans").delete().eq("user_id", uid);
+  const rows = plan
+    .filter((s) => s.recipe.id)
+    .map((slot) => ({
+      user_id: uid,
+      day: slot.day,
+      meal_type: slot.meal_type,
+      recipe_id: slot.recipe.id!,
+      budget: slot.budget,
+    }));
+  if (!rows.length) return false;
+  const { error } = await supabase.from("weekly_plans").insert(rows);
+  if (error) throw new Error(error.message);
+  return true;
+}
+
+/** POST /weekly-plan con presupuesto diario (fallback local). */
 export async function generateWeeklyPlan(input: GenerateWeeklyPlanInput): Promise<{
   plan: WeeklyPlanSlot[];
   source: "worker" | "supabase" | "demo";
   saved: boolean;
+  weekTotal: number;
+  weekBudget: number;
+  withinBudget: boolean;
   whatsapp?: { ok: boolean; error?: string };
 }> {
-  const weekBudget = Math.max(0, input.budget);
+  const dailyBudget = Math.max(0, input.dailyBudget);
+  const weekBudget = dailyBudget * PLAN_DAYS.length;
   const base = apiBase();
 
   if (base) {
@@ -63,7 +106,9 @@ export async function generateWeeklyPlan(input: GenerateWeeklyPlanInput): Promis
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ingredients: input.ingredients ?? [],
-          budget: weekBudget,
+          daily_budget: dailyBudget,
+          budget: dailyBudget,
+          meals: PLAN_MEALS,
           user_id: input.userId,
           recipient: input.recipient,
           notify: Boolean(input.notify && input.recipient),
@@ -73,12 +118,28 @@ export async function generateWeeklyPlan(input: GenerateWeeklyPlanInput): Promis
         const data = (await res.json()) as {
           plan?: WeeklyPlanSlot[];
           saved?: boolean;
+          meta?: { week_total?: number; week_budget?: number; within_budget?: boolean };
           whatsapp?: { ok: boolean; error?: string };
         };
+        let plan = data.plan ?? [];
+        let saved = Boolean(data.saved);
+        if (input.persist !== false && !saved) {
+          try {
+            saved = await persistPlan(plan, input.userId);
+          } catch {
+            /* sin sesión Supabase */
+          }
+        }
+        const weekTotal =
+          data.meta?.week_total ??
+          plan.reduce((sum, slot) => sum + slot.recipe.cost, 0);
         return {
-          plan: data.plan ?? [],
+          plan,
           source: "worker",
-          saved: Boolean(data.saved),
+          saved,
+          weekTotal,
+          weekBudget: data.meta?.week_budget ?? weekBudget,
+          withinBudget: data.meta?.within_budget ?? weekTotal <= weekBudget,
           whatsapp: data.whatsapp,
         };
       }
@@ -87,15 +148,15 @@ export async function generateWeeklyPlan(input: GenerateWeeklyPlanInput): Promis
     }
   }
 
-  const perMeal = Math.max(1500, Math.floor(weekBudget / 21));
+  const perDish = Math.max(1500, Math.floor(dailyBudget / 2));
   const { recipes, source } = await queryRecipes({
     ingredients: input.ingredients,
-    budget: perMeal * 1.35,
+    budget: perDish,
     generate: false,
   });
 
   let pool = recipes;
-  if (!pool.length && source === "demo") {
+  if (!pool.length) {
     pool = buildWeekPlan(weekBudget).map(({ recipe }) => ({
       id: recipe.id,
       name: recipe.name,
@@ -107,46 +168,44 @@ export async function generateWeeklyPlan(input: GenerateWeeklyPlanInput): Promis
   }
 
   const plan: WeeklyPlanSlot[] = [];
-  let i = 0;
-  for (const day of PLAN_DAYS) {
-    for (const meal_type of MEALS) {
-      const recipe = pickRecipe(pool, i++, perMeal);
-      if (!recipe) continue;
-      plan.push({ day, meal_type, recipe, budget: weekBudget });
-    }
-  }
+  PLAN_DAYS.forEach((day, dayIndex) => {
+    const picks = pickDayMeals(pool, dayIndex, dailyBudget);
+    if (!picks) return;
+    picks.forEach((recipe, mi) => {
+      plan.push({
+        day,
+        meal_type: PLAN_MEALS[mi],
+        recipe,
+        budget: dailyBudget,
+      });
+    });
+  });
 
+  const weekTotal = plan.reduce((sum, slot) => sum + slot.recipe.cost, 0);
   let saved = false;
-  if (
-    input.persist !== false &&
-    source === "supabase" &&
-    isSupabaseConfigured()
-  ) {
-    const supabase = getSupabaseBrowser();
-    if (supabase) {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = input.userId ?? userData.user?.id;
-      if (userId) {
-        await supabase.from("weekly_plans").delete().eq("user_id", userId);
-        const rows = plan
-          .filter((s) => s.recipe.id)
-          .map((slot) => ({
-            user_id: userId,
-            day: slot.day,
-            meal_type: slot.meal_type,
-            recipe_id: slot.recipe.id!,
-            budget: slot.budget,
-          }));
-        if (rows.length) {
-          const { error } = await supabase.from("weekly_plans").insert(rows);
-          if (error) throw new Error(error.message);
-          saved = true;
-        }
-      }
+  if (input.persist !== false) {
+    try {
+      saved = await persistPlan(plan, input.userId);
+    } catch {
+      saved = false;
     }
   }
 
-  return { plan, source: source === "worker" ? "supabase" : source, saved };
+  return {
+    plan,
+    source: source === "demo" ? "demo" : "supabase",
+    saved,
+    weekTotal,
+    weekBudget,
+    withinBudget: weekTotal <= weekBudget,
+  };
+}
+
+export async function saveWeeklyPlanToSupabase(
+  plan: WeeklyPlanSlot[],
+  userId?: string,
+): Promise<boolean> {
+  return persistPlan(plan, userId);
 }
 
 export async function fetchMyWeeklyPlan(): Promise<(WeeklyPlanSlot & { id: string })[] | null> {
