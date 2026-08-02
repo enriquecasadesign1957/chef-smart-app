@@ -1,11 +1,11 @@
-import { handleGetRecipes } from "./recipes";
+import { handleGetRecipes, handlePantryRecipes } from "./recipes";
 import { sendMenuReadyWhatsApp } from "./twilio";
 import { CORS_HEADERS, badRequest, json, type Env } from "./types";
 import { handleGenerateWeeklyPlan } from "./weekly-plan";
 
 /**
  * Mi Menú Smart API Worker — independiente de Senior Safe.
- * POST /recipes | POST /weekly-plan | POST /notify/whatsapp
+ * GET /recipes?ingredients=… | POST /recipes | POST /weekly-plan | POST /notify/whatsapp
  */
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -21,8 +21,17 @@ export default {
         return json({
           app: env.APP_NAME ?? "Mi Menú Smart",
           ok: true,
-          endpoints: ["POST /recipes", "POST /weekly-plan", "POST /notify/whatsapp"],
+          endpoints: [
+            "GET /recipes?ingredients=",
+            "POST /recipes",
+            "POST /weekly-plan",
+            "POST /notify/whatsapp",
+          ],
         });
+      }
+
+      if (request.method === "GET" && (path === "/recipes" || path.endsWith("/recipes"))) {
+        return handlePantryRecipes(request, env);
       }
 
       if (request.method === "POST" && (path === "/recipes" || path.endsWith("/recipes"))) {

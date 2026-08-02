@@ -57,7 +57,7 @@ export default function HomePage() {
           href="/recetas/"
           className="flex w-full items-center justify-center rounded-2xl bg-[var(--cs-brand)] px-5 py-4 text-base font-bold text-white shadow-lg transition hover:opacity-95"
         >
-          Ver recetas sugeridas
+          Ver Modo Despensa
         </Link>
       </section>
 

@@ -1,12 +1,99 @@
-import { generateRecipesWithAi } from "./ai";
+import { generatePantryRecipesWithAi, generateRecipesWithAi } from "./ai";
 import { insertRecipes, listRecipesByBudget } from "./supabase";
-import { badRequest, json, type Env, type Recipe } from "./types";
+import {
+  badRequest,
+  json,
+  type Env,
+  type PantryRecipe,
+  type Recipe,
+} from "./types";
 
 function score(recipe: Recipe, tokens: string[]): number {
   if (!tokens.length) return 0;
   return recipe.ingredients.filter((ing) =>
     tokens.some((t) => ing.toLowerCase().includes(t) || t.includes(ing.toLowerCase())),
   ).length;
+}
+
+function parseIngredientList(raw: string): string[] {
+  return raw
+    .split(/[,;|\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function toPantryRecipe(r: Recipe): PantryRecipe {
+  return {
+    id: r.id,
+    name: r.name,
+    ingredients: r.ingredients,
+    steps:
+      r.steps?.length
+        ? r.steps
+        : [
+            "Reúne y lava los ingredientes.",
+            "Prepara según la técnica de la receta.",
+            "Ajusta sal y cocción al gusto.",
+            "Sirve de inmediato.",
+          ],
+    difficulty: r.difficulty,
+    time: r.time,
+  };
+}
+
+/** GET /recipes?ingredients=huevos,tomate — Modo Despensa (sin precios). */
+export async function handlePantryRecipes(req: Request, env: Env): Promise<Response> {
+  const url = new URL(req.url);
+  const ingredients = parseIngredientList(url.searchParams.get("ingredients") ?? "");
+  if (!ingredients.length) {
+    return badRequest("ingredients requerido (ej: ?ingredients=huevos,tomate,cebolla)");
+  }
+
+  const tokens = ingredients.map((t) => t.toLowerCase());
+  let aiRecipes: Recipe[] = [];
+  let aiError: string | undefined;
+
+  try {
+    aiRecipes = await generatePantryRecipesWithAi(env, ingredients);
+  } catch (e) {
+    aiError = e instanceof Error ? e.message : "AI falló";
+  }
+
+  let dbRecipes: Recipe[] = [];
+  try {
+    dbRecipes = await listRecipesByBudget(env, 1_000_000);
+  } catch {
+    /* si falla Supabase y hay AI, seguimos */
+  }
+
+  const merged = new Map<string, Recipe>();
+  for (const r of [...aiRecipes, ...dbRecipes]) {
+    const key = r.id ?? r.name.toLowerCase();
+    if (!merged.has(key)) merged.set(key, r);
+  }
+
+  const recipes = [...merged.values()]
+    .map((r) => ({ recipe: r, hits: score(r, tokens) }))
+    .filter((x) => x.hits > 0 || aiRecipes.some((a) => a.name === x.recipe.name))
+    .sort((a, b) => b.hits - a.hits || a.recipe.time - b.recipe.time)
+    .slice(0, 8)
+    .map((x) => toPantryRecipe(x.recipe));
+
+  if (!recipes.length && aiError) {
+    return json({ error: aiError, recipes: [] }, 502);
+  }
+
+  return json({
+    recipes,
+    meta: {
+      app: env.APP_NAME ?? "Mi Menú Smart",
+      mode: "pantry",
+      generated: aiRecipes.length,
+      fromDb: dbRecipes.length,
+      aiError,
+      ingredients,
+    },
+  });
 }
 
 /** POST /recipes — getRecipes(ingredients, budget) */

@@ -18,6 +18,17 @@ export type Recipe = {
   cost: number;
   difficulty: string;
   time: number;
+  steps?: string[];
+};
+
+/** Respuesta pública del Modo Despensa (sin costo). */
+export type PantryRecipe = {
+  id?: string;
+  name: string;
+  ingredients: string[];
+  steps: string[];
+  difficulty: string;
+  time: number;
 };
 
 export const CORS_HEADERS: Record<string, string> = {
