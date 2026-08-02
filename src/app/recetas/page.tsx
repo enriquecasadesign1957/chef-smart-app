@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useState, useTransition } from "react";
+import { RecipeCard } from "@/components/recipe-card";
+import { RecipeModal } from "@/components/recipe-modal";
 import { fetchPantryRecipes, type PantryRecipe } from "@/lib/api/pantry";
 import { useChefSession } from "@/lib/chef-session";
 
@@ -12,6 +14,7 @@ export default function RecetasPage() {
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [selected, setSelected] = useState<PantryRecipe | null>(null);
 
   useEffect(() => {
     if (hydrated) setInput(ingredientsText);
@@ -86,7 +89,20 @@ export default function RecetasPage() {
       )}
 
       {pending && (
-        <p className="text-sm text-[var(--cs-muted)]">Revisando tu despensa…</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-md"
+            >
+              <div className="h-48 animate-pulse bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100" />
+              <div className="space-y-3 p-5">
+                <div className="h-5 w-3/4 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-1/2 animate-pulse rounded bg-gray-100" />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {!pending && searched && recipes.length === 0 ? (
@@ -111,71 +127,18 @@ export default function RecetasPage() {
             ) : null}
           </div>
 
-          <ul className="space-y-3">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {recipes.map((r) => (
               <li key={r.id ?? r.name}>
-                <details className="group overflow-hidden rounded-2xl border border-[var(--cs-line)] bg-[var(--cs-card)] shadow-sm open:shadow-md">
-                  <summary className="cursor-pointer list-none px-4 py-4 marker:content-none [&::-webkit-details-marker]:hidden">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-bold text-[var(--cs-brand)]">{r.name}</h3>
-                        <p className="mt-1 text-sm text-[var(--cs-muted)]">
-                          {r.difficulty} · {r.time} min
-                        </p>
-                      </div>
-                      <span className="mt-1 shrink-0 text-sm font-semibold text-[var(--cs-accent)] group-open:rotate-180">
-                        ▾
-                      </span>
-                    </div>
-                  </summary>
-
-                  <div className="space-y-4 border-t border-[var(--cs-line)] px-4 py-4">
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wide text-[var(--cs-accent)]">
-                        Ingredientes requeridos
-                      </h4>
-                      <ul className="mt-2 flex flex-wrap gap-2">
-                        {r.ingredients.map((ing) => (
-                          <li
-                            key={ing}
-                            className="rounded-full bg-[var(--cs-mint)]/20 px-3 py-1 text-sm font-medium text-[var(--cs-brand)]"
-                          >
-                            {ing}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wide text-[var(--cs-accent)]">
-                        Pasos de preparación
-                      </h4>
-                      <ol className="mt-2 space-y-2 text-sm leading-relaxed text-[var(--cs-ink)]">
-                        {r.steps.map((step, i) => (
-                          <li key={`${r.name}-step-${i}`} className="flex gap-3">
-                            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--cs-brand)] text-xs font-bold text-white">
-                              {i + 1}
-                            </span>
-                            <span>{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 text-sm text-[var(--cs-muted)]">
-                      <span className="rounded-xl bg-white/80 px-3 py-1.5 font-semibold">
-                        Tiempo estimado: {r.time} min
-                      </span>
-                      <span className="rounded-xl bg-white/80 px-3 py-1.5 font-semibold">
-                        Dificultad: {r.difficulty}
-                      </span>
-                    </div>
-                  </div>
-                </details>
+                <RecipeCard recipe={r} onOpen={() => setSelected(r)} />
               </li>
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {selected ? (
+        <RecipeModal recipe={selected} onClose={() => setSelected(null)} />
       ) : null}
     </div>
   );

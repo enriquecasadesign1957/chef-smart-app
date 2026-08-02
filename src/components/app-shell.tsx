@@ -28,7 +28,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-lg flex-1 px-5 pb-28 pt-6">{children}</main>
+      <main
+        className={`mx-auto w-full flex-1 px-5 pb-28 pt-6 ${
+          pathname.startsWith("/plan") || pathname.startsWith("/compras")
+            ? "max-w-6xl"
+            : "max-w-lg"
+        }`}
+      >
+        {children}
+      </main>
 
       <nav
         className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--cs-line)] bg-[color-mix(in_oklab,var(--cs-bg)_92%,white)] backdrop-blur-md"

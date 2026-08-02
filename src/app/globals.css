@@ -35,3 +35,19 @@ textarea,
 button {
   font: inherit;
 }
+
+@keyframes ss-cta-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.35);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 12px 28px -6px rgba(255, 255, 255, 0.45);
+  }
+}
+
+.ss-cta-pulse {
+  animation: ss-cta-pulse 1.8s ease-in-out infinite;
+}

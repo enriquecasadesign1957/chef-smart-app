@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useMemo, useState, useTransition } from "react";
+import { ProductCard } from "@/components/product-card";
+import { SponsoredBanner } from "@/components/sponsored-banner";
+import { supermarketProductUrl } from "@/lib/affiliate";
 import { optimizeWithSupermarket, type SmartProduct } from "@/lib/api/supermarket";
 import { useChefSession } from "@/lib/chef-session";
 import {
@@ -9,7 +12,6 @@ import {
   type GroceryCategory,
   type GroceryItem,
 } from "@/lib/demo-data";
-import { supermarketProductUrl } from "@/lib/affiliate";
 
 const ORDER: GroceryCategory[] = ["Verduras", "Proteínas", "Lácteos", "Abarrotes", "Otros"];
 
@@ -83,11 +85,14 @@ export default function ComprasPage() {
   return (
     <div className="space-y-6">
       <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-purple-700">
+          Pasillo virtual
+        </p>
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold text-[var(--cs-brand)]">
           Supermercado Smart
         </h1>
         <p className="mt-2 text-sm text-[var(--cs-muted)]">
-          Lista categorizada + optimización con el súper que ya usas. Los enlaces incluyen
+          Recorre los pasillos por categoría. Cada “Agregar al Carro” abre tu súper con
           tracking de afiliados.
         </p>
       </div>
@@ -123,24 +128,13 @@ export default function ComprasPage() {
         ) : null}
       </form>
 
-      {/* Banner de Alianza Comercial */}
-      <aside className="relative overflow-hidden rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
-        <span className="absolute right-3 top-3 rounded-full bg-yellow-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-900">
-          Auspiciado
-        </span>
-        <p className="pr-20 text-sm font-semibold leading-snug text-yellow-950">
-          ¡Ahorra un 15% extra en Santa Isabel pagando con tu tarjeta del mes!
-        </p>
-        <p className="mt-1 text-xs text-yellow-900/75">
-          Alianza comercial Mi Menú Smart · oferta de ejemplo
-        </p>
-      </aside>
+      <SponsoredBanner storeUrl={storeUrl} />
 
-      <div className="rounded-2xl bg-[var(--cs-brand)] px-4 py-3 text-white">
+      <div className="rounded-2xl bg-gradient-to-r from-purple-800 to-fuchsia-700 px-4 py-3 text-white shadow-md">
         <p className="text-xs font-semibold uppercase tracking-wide text-white/70">
-          Pendiente estimado
+          Carro estimado (pendiente)
         </p>
-        <p className="text-2xl font-bold tabular-nums">{formatClp(total)}</p>
+        <p className="text-2xl font-extrabold tabular-nums">{formatClp(total)}</p>
       </div>
 
       {error && (
@@ -149,50 +143,33 @@ export default function ComprasPage() {
         </p>
       )}
 
-      <div className="space-y-5">
+      <div className="space-y-8">
         {grouped.map(({ cat, items: catItems }) => (
           <section key={cat}>
-            <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-[var(--cs-accent)]">
-              {cat}
-            </h2>
-            <ul className="space-y-2">
+            <div className="mb-3 flex items-end justify-between gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--cs-accent)]">
+                Pasillo · {cat}
+              </h2>
+              <span className="text-xs font-medium text-slate-400">
+                {catItems.length} productos
+              </span>
+            </div>
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {catItems.map((item) => {
-                const done = Boolean(checked[item.id]);
                 const href = item.url
                   ? item.url
                   : supermarketProductUrl(storeUrl, item.name);
                 return (
                   <li key={item.id}>
-                    <div
-                      className={`flex items-center gap-3 rounded-2xl border border-[var(--cs-line)] px-4 py-3 ${
-                        done ? "bg-white/40 opacity-60" : "bg-[var(--cs-card)]"
-                      }`}
-                    >
-                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={done}
-                          onChange={() =>
-                            setChecked((c) => ({ ...c, [item.id]: !c[item.id] }))
-                          }
-                          className="h-5 w-5 accent-[var(--cs-brand)]"
-                        />
-                        <span className={`min-w-0 flex-1 truncate font-medium ${done ? "line-through" : ""}`}>
-                          {item.name}
-                        </span>
-                      </label>
-                      <span className="shrink-0 text-sm font-semibold text-[var(--cs-muted)]">
-                        {formatClp(item.estimatedClp)}
-                      </span>
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer sponsored"
-                        className="shrink-0 rounded-xl bg-[var(--cs-mint)]/25 px-2.5 py-1 text-xs font-bold text-[var(--cs-brand)]"
-                      >
-                        Ver
-                      </a>
-                    </div>
+                    <ProductCard
+                      name={item.name}
+                      priceClp={item.estimatedClp}
+                      href={href}
+                      done={Boolean(checked[item.id])}
+                      onToggleDone={() =>
+                        setChecked((c) => ({ ...c, [item.id]: !c[item.id] }))
+                      }
+                    />
                   </li>
                 );
               })}
