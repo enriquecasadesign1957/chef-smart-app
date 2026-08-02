@@ -25,6 +25,7 @@ export function mapRecipeRow(row: Record<string, unknown>): Recipe {
   const ingredients = Array.isArray(row.ingredients)
     ? row.ingredients.map(String)
     : [];
+  const steps = Array.isArray(row.steps) ? row.steps.map(String) : [];
   return {
     id: String(row.id),
     name: String(row.name),
@@ -32,6 +33,9 @@ export function mapRecipeRow(row: Record<string, unknown>): Recipe {
     cost: Number(row.cost),
     difficulty: String(row.difficulty),
     time: Number(row.time),
+    steps,
+    photo_keyword: row.photo_keyword ? String(row.photo_keyword) : undefined,
+    ingredients_key: row.ingredients_key ? String(row.ingredients_key) : undefined,
   };
 }
 
@@ -47,6 +51,24 @@ export async function listRecipesByBudget(env: Env, budget: number): Promise<Rec
   return rows.map(mapRecipeRow);
 }
 
+/** Caché de aprendizaje: match exacto por ingredients_key. */
+export async function findRecipesByIngredientsKey(
+  env: Env,
+  key: string,
+): Promise<Recipe[]> {
+  if (!key) return [];
+  const encoded = encodeURIComponent(key);
+  const res = await supabaseFetch(
+    env,
+    `/recipes?select=*&ingredients_key=eq.${encoded}&order=created_at.desc`,
+  );
+  if (!res.ok) {
+    throw new Error(`Supabase cache recipes: ${res.status} ${await res.text()}`);
+  }
+  const rows = (await res.json()) as Record<string, unknown>[];
+  return rows.map(mapRecipeRow);
+}
+
 export async function insertRecipes(env: Env, recipes: Recipe[]): Promise<Recipe[]> {
   if (!recipes.length) return [];
   const body = recipes.map((r) => ({
@@ -55,6 +77,9 @@ export async function insertRecipes(env: Env, recipes: Recipe[]): Promise<Recipe
     cost: r.cost,
     difficulty: r.difficulty,
     time: r.time,
+    steps: r.steps ?? [],
+    photo_keyword: r.photo_keyword ?? null,
+    ingredients_key: r.ingredients_key ?? null,
   }));
   const res = await supabaseFetch(env, "/recipes", {
     method: "POST",

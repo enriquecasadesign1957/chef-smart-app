@@ -27,37 +27,94 @@ function resolveProvider(env: Env): { url: string; apiKey: string; model: string
 
 const SYSTEM = `Eres el chef de "Mi Menú Smart" (Chile). Generas recetas realistas, económicas y en español.
 Responde SOLO JSON válido (sin markdown) con esta forma:
-{"recipes":[{"name":"...","ingredients":["..."],"cost":1234,"difficulty":"Fácil|Media|Chef","time":30}]}
+{"recipes":[{"name":"...","ingredients":["..."],"steps":["paso 1"],"cost":1234,"difficulty":"Fácil|Media|Chef","time":30,"photo_keyword":"baked-potato"}]}
 - cost en CLP (número entero), siempre <= presupuesto indicado.
-- Usa preferentemente los ingredientes dados; puedes añadir básicos baratos (sal, aceite, cebolla).
+- steps: 4 a 8 instrucciones claras.
+- photo_keyword OBLIGATORIO: término en inglés ultra específico del plato (kebab-case, ej. "tomato-soup", "chicken-rice").
+- Usa preferentemente los ingredientes dados; puedes añadir básicos (sal, aceite, cebolla).
 - Máximo 5 recetas.
 - No inventes marcas ni precios absurdos.`;
 
-const SYSTEM_PANTRY = `Eres el chef de "Mi Menú Smart" (Chile), modo despensa/refrigerador.
-Generas recetas para cocinar YA con lo que la persona tiene en casa. Español claro.
-Responde SOLO JSON válido (sin markdown):
-{"recipes":[{"name":"...","ingredients":["..."],"steps":["paso 1","paso 2"],"difficulty":"Fácil|Media|Chef","time":25}]}
-- Prioriza los ingredientes listados; puedes sumar básicos (sal, aceite, agua).
-- steps: 4 a 8 pasos concretos y accionables.
-- NO menciones precios, costos ni presupuestos.
-- Máximo 5 recetas.
-- time en minutos.`;
+const SYSTEM_LEARN = `Eres el chef de "Mi Menú Smart" (Chile). Generas UNA o pocas recetas básicas con los ingredientes clave dados.
+Responde SOLO JSON válido:
+{"recipes":[{"name":"...","ingredients":["..."],"steps":["..."],"cost":3500,"difficulty":"Fácil|Media|Chef","time":25,"photo_keyword":"baked-potato"}]}
+REGLAS ESTRICTAS:
+- photo_keyword OBLIGATORIO en inglés, kebab-case, ultra específico del plato (ej. "baked-potato", "tomato-soup", "scrambled-eggs-tomato").
+- steps: array de 4-8 instrucciones en español.
+- ingredients: usa los ingredientes clave recibidos (puedes sumar sal/aceite/agua).
+- cost: estimado CLP realista Chile.
+- Máximo 3 recetas.
+- Sin markdown.`;
 
-export async function generateRecipesWithAi(
+function parseDifficulty(raw: unknown): string {
+  const d = String(raw ?? "Fácil");
+  if (d.includes("Chef")) return "Chef";
+  if (d.toLowerCase().includes("media") || d.toLowerCase().includes("medio")) return "Media";
+  return "Fácil";
+}
+
+function parseAiRecipes(
+  parsed: { recipes?: unknown[] },
+  opts: { budget?: number; requireCost: boolean },
+): Recipe[] {
+  const recipes: Recipe[] = [];
+  for (const item of parsed.recipes ?? []) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    const name = String(r.name ?? "").trim();
+    const time = Number(r.time);
+    const cost = Number(r.cost);
+    const ingredients = Array.isArray(r.ingredients)
+      ? r.ingredients.map(String)
+      : [];
+    const steps = Array.isArray(r.steps)
+      ? r.steps.map((s) => String(s).trim()).filter(Boolean)
+      : Array.isArray(r.instructions)
+        ? r.instructions.map((s) => String(s).trim()).filter(Boolean)
+        : [];
+    let photo_keyword = String(r.photo_keyword ?? r.photoKeyword ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+    if (!name || !ingredients.length || !Number.isFinite(time) || time <= 0) continue;
+    if (opts.requireCost) {
+      if (!Number.isFinite(cost) || cost <= 0) continue;
+      if (opts.budget != null && cost > opts.budget) continue;
+    }
+    if (!photo_keyword) {
+      photo_keyword = name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{M}/gu, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 40) || "homemade-dish";
+    }
+    recipes.push({
+      name,
+      ingredients,
+      cost: Number.isFinite(cost) && cost > 0 ? Math.round(cost) : 2500,
+      difficulty: parseDifficulty(r.difficulty),
+      time: Math.round(time),
+      steps: steps.length
+        ? steps
+        : ["Preparar ingredientes.", "Cocinar según gusto.", "Servir caliente."],
+      photo_keyword,
+    });
+  }
+  return recipes;
+}
+
+async function chatJson(
   env: Env,
-  input: AiPrompt,
-): Promise<Recipe[]> {
+  system: string,
+  user: string,
+): Promise<{ recipes?: unknown[] }> {
   const provider = resolveProvider(env);
   if (!provider) {
     throw new Error("Falta GROQ_API_KEY u OPENAI_API_KEY en el Worker");
   }
-
-  const userPayload = {
-    ingredients: input.ingredients,
-    budget: input.budget,
-    output: "recipes" as const,
-    preferences: input.preferences || undefined,
-  };
 
   const res = await fetch(provider.url, {
     method: "POST",
@@ -69,14 +126,8 @@ export async function generateRecipesWithAi(
       model: provider.model,
       temperature: 0.4,
       messages: [
-        { role: "system", content: SYSTEM },
-        {
-          role: "user",
-          content:
-            `Genera recetas usando los ingredientes disponibles y ajustadas al presupuesto indicado. ` +
-            `Devuelve nombre, ingredientes, costo estimado, dificultad y tiempo.\n` +
-            `Input JSON:\n${JSON.stringify(userPayload)}`,
-        },
+        { role: "system", content: system },
+        { role: "user", content: user },
       ],
       response_format: { type: "json_object" },
     }),
@@ -90,106 +141,59 @@ export async function generateRecipesWithAi(
     choices?: { message?: { content?: string } }[];
   };
   const raw = payload.choices?.[0]?.message?.content ?? "{}";
-  let parsed: { recipes?: unknown[] };
   try {
-    parsed = JSON.parse(raw) as { recipes?: unknown[] };
+    return JSON.parse(raw) as { recipes?: unknown[] };
   } catch {
     throw new Error("La IA no devolvió JSON válido");
   }
-
-  const recipes: Recipe[] = [];
-  for (const item of parsed.recipes ?? []) {
-    if (!item || typeof item !== "object") continue;
-    const r = item as Record<string, unknown>;
-    const name = String(r.name ?? "").trim();
-    const cost = Number(r.cost);
-    const time = Number(r.time);
-    const ingredients = Array.isArray(r.ingredients)
-      ? r.ingredients.map(String)
-      : [];
-    if (!name || !Number.isFinite(cost) || cost <= 0 || cost > input.budget) continue;
-    if (!Number.isFinite(time) || time <= 0) continue;
-    recipes.push({
-      name,
-      ingredients,
-      cost: Math.round(cost),
-      difficulty: String(r.difficulty ?? "Fácil"),
-      time: Math.round(time),
-    });
-  }
-  return recipes.slice(0, 5);
 }
 
-/** Modo Despensa: sin presupuesto; incluye pasos de preparación. */
+export async function generateRecipesWithAi(
+  env: Env,
+  input: AiPrompt,
+): Promise<Recipe[]> {
+  const parsed = await chatJson(
+    env,
+    SYSTEM,
+    `Genera recetas usando los ingredientes disponibles y ajustadas al presupuesto indicado. ` +
+      `Devuelve nombre, ingredientes, steps, costo estimado, dificultad, tiempo y photo_keyword.\n` +
+      `Input JSON:\n${JSON.stringify({
+        ingredients: input.ingredients,
+        budget: input.budget,
+        output: "recipes",
+        preferences: input.preferences || undefined,
+      })}`,
+  );
+  return parseAiRecipes(parsed, { budget: input.budget, requireCost: true }).slice(0, 5);
+}
+
+/** Generación con photo_keyword obligatorio (aprendizaje / despensa). */
+export async function generateLearningRecipesWithAi(
+  env: Env,
+  ingredients: string[],
+  budget?: number,
+): Promise<Recipe[]> {
+  const parsed = await chatJson(
+    env,
+    SYSTEM_LEARN,
+    `Genera recetas con estos ingredientes clave limpios (ya sin adjetivos):\n` +
+      JSON.stringify({
+        ingredients,
+        budget: budget ?? 8000,
+        output: "recipes",
+        require: ["photo_keyword", "steps", "cost"],
+      }),
+  );
+  return parseAiRecipes(parsed, {
+    budget: budget ?? 50_000,
+    requireCost: true,
+  }).slice(0, 3);
+}
+
+/** @deprecated usar generateLearningRecipesWithAi */
 export async function generatePantryRecipesWithAi(
   env: Env,
   ingredients: string[],
 ): Promise<Recipe[]> {
-  const provider = resolveProvider(env);
-  if (!provider) {
-    throw new Error("Falta GROQ_API_KEY u OPENAI_API_KEY en el Worker");
-  }
-
-  const res = await fetch(provider.url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${provider.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: provider.model,
-      temperature: 0.45,
-      messages: [
-        { role: "system", content: SYSTEM_PANTRY },
-        {
-          role: "user",
-          content:
-            `Cocinar con lo que ya tengo. Ingredientes en despensa/refrigerador:\n` +
-            JSON.stringify({ ingredients, output: "recipes" }),
-        },
-      ],
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`AI error ${res.status}: ${await res.text()}`);
-  }
-
-  const payload = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const raw = payload.choices?.[0]?.message?.content ?? "{}";
-  let parsed: { recipes?: unknown[] };
-  try {
-    parsed = JSON.parse(raw) as { recipes?: unknown[] };
-  } catch {
-    throw new Error("La IA no devolvió JSON válido");
-  }
-
-  const recipes: Recipe[] = [];
-  for (const item of parsed.recipes ?? []) {
-    if (!item || typeof item !== "object") continue;
-    const r = item as Record<string, unknown>;
-    const name = String(r.name ?? "").trim();
-    const time = Number(r.time);
-    const ingredientsList = Array.isArray(r.ingredients)
-      ? r.ingredients.map(String)
-      : [];
-    const steps = Array.isArray(r.steps)
-      ? r.steps.map((s) => String(s).trim()).filter(Boolean)
-      : [];
-    if (!name || !Number.isFinite(time) || time <= 0 || !ingredientsList.length) continue;
-    recipes.push({
-      name,
-      ingredients: ingredientsList,
-      cost: 0,
-      difficulty: String(r.difficulty ?? "Fácil"),
-      time: Math.round(time),
-      steps: steps.length
-        ? steps
-        : ["Preparar ingredientes.", "Cocinar según gusto.", "Servir caliente."],
-    });
-  }
-  return recipes.slice(0, 5);
+  return generateLearningRecipesWithAi(env, ingredients);
 }

@@ -17,6 +17,7 @@ En [SQL Editor](https://supabase.com/dashboard/project/aknloedykengemrlehyp/sql/
 
 1. `supabase/migrations/20260731120000_init_recipes_weekly_plans.sql`
 2. `supabase/migrations/20260731120100_seed_recipes.sql`
+3. `supabase/migrations/20260802180000_recipes_learning_cache.sql` (steps, photo_keyword, ingredients_key)
 
 O con CLI (tras login + link):
 

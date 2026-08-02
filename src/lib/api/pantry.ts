@@ -5,6 +5,7 @@ export type PantryRecipe = {
   steps: string[];
   difficulty: string;
   time: number;
+  photo_keyword?: string;
 };
 
 function apiBase(): string | null {
@@ -110,6 +111,7 @@ export async function fetchPantryRecipes(ingredientsText: string): Promise<{
               ],
           difficulty: r.difficulty,
           time: r.time,
+          photo_keyword: r.photo_keyword,
         }));
         return { recipes, source: "worker" };
       }

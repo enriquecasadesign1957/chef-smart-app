@@ -19,6 +19,8 @@ export type Recipe = {
   difficulty: string;
   time: number;
   steps?: string[];
+  photo_keyword?: string;
+  ingredients_key?: string;
 };
 
 /** Respuesta pública del Modo Despensa (sin costo). */
@@ -29,6 +31,7 @@ export type PantryRecipe = {
   steps: string[];
   difficulty: string;
   time: number;
+  photo_keyword?: string;
 };
 
 export const CORS_HEADERS: Record<string, string> = {

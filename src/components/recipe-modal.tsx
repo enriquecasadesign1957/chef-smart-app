@@ -38,7 +38,12 @@ export function RecipeModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative shrink-0">
-          <RecipeHeroImage title={recipe.name} className="h-56 sm:h-64" priority />
+          <RecipeHeroImage
+            title={recipe.name}
+            photoKeyword={recipe.photo_keyword}
+            className="h-56 sm:h-64"
+            priority
+          />
           <button
             type="button"
             onClick={onClose}

@@ -5,16 +5,20 @@ import { recipeHeroImageUrl } from "@/lib/recipe-image";
 
 export function RecipeHeroImage({
   title,
+  photoKeyword,
   className = "h-48",
+  size = "hero",
   priority = false,
 }: {
   title: string;
+  photoKeyword?: string;
   className?: string;
+  size?: "hero" | "thumb";
   priority?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
-  const src = recipeHeroImageUrl(title);
+  const src = recipeHeroImageUrl(title, size, photoKeyword);
 
   useEffect(() => {
     setLoaded(false);

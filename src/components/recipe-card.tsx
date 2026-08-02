@@ -63,7 +63,11 @@ export function RecipeCard({
       onClick={onOpen}
       className="flex w-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white text-left shadow-md transition-all duration-300 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cs-mint)]"
     >
-      <RecipeHeroImage title={recipe.name} className="h-48" />
+      <RecipeHeroImage
+        title={recipe.name}
+        photoKeyword={recipe.photo_keyword}
+        className="h-48"
+      />
       <div className="flex flex-1 flex-col p-5">
         <h3 className="mb-2 text-xl font-bold text-gray-800">{recipe.name}</h3>
         <RecipeBadges time={recipe.time} difficulty={recipe.difficulty} />

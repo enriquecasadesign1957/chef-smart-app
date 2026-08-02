@@ -25,10 +25,15 @@ function hashTitle(title: string): number {
   return h;
 }
 
-/** URL dinámica tipo Unsplash según el título (foto de plato). */
-export function recipeHeroImageUrl(title: string, size: "hero" | "thumb" = "hero"): string {
-  const photo = FOOD_PHOTOS[hashTitle(title) % FOOD_PHOTOS.length];
-  const q = encodeURIComponent(title.slice(0, 48));
+/** URL dinámica tipo Unsplash según el título o photo_keyword. */
+export function recipeHeroImageUrl(
+  title: string,
+  size: "hero" | "thumb" = "hero",
+  photoKeyword?: string,
+): string {
+  const seed = photoKeyword?.trim() || title;
+  const photo = FOOD_PHOTOS[hashTitle(seed) % FOOD_PHOTOS.length];
+  const q = encodeURIComponent((photoKeyword || title).slice(0, 48));
   const wh = size === "thumb" ? "w=160&h=160" : "w=900&h=600";
-  return `https://images.unsplash.com/${photo}?auto=format&fit=crop&${wh}&q=80&utm_source=mimenusmart&utm_medium=referral&sig=${hashTitle(title)}&q_food=${q}`;
+  return `https://images.unsplash.com/${photo}?auto=format&fit=crop&${wh}&q=80&utm_source=mimenusmart&utm_medium=referral&sig=${hashTitle(seed)}&q_food=${q}`;
 }
